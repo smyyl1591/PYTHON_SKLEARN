@@ -135,3 +135,146 @@ print('訓練集每一列的最大絕對值 \n', max_abs_scaler.scale_)
 X_test = np.array([[-3., -1., 4.]])
 X_test_maxabs = max_abs_scaler.transform(X_test)
 print('測試集資料除以訓練集得到的最大絕對值縮放 \n', X_test_maxabs)
+
+
+'''
+Scikit-learn：資料預處理 Preprocessing data
+標準化、資料最大最小縮放處理、正則化、特徵二值化和資料缺失值處理。
+Note: 一定要注意歸一化是歸一化什麼，歸一化features還是samples。
+
+資料標準化：去除均值和方差進行縮放 Standardization: mean removal and variance scaling
+當單個特徵的樣本取值相差甚大或明顯不遵從高斯正態分佈時，資料標準化表現的效果較差。
+實際操作中，經常忽略特徵資料的分佈形狀，移除每個特徵均值，劃分離散特徵的標準差，從而等級化，進而實現資料中心化。
+Note: test set、training set 都要做相同的預處理操作（standardization、data transformation、etc）
+
+'''
+from sklearn import preprocessing
+import numpy as np
+
+'''
+二值化 Binarization 主要是為了將 資料特徵 轉變成 boolean變數。
+在sklearn中，sklearn.preprocessing.Binarizer 函式可以實現這一功能。
+可以設定一個閾值(預設為0.0)，結果資料值大於閾值的為1，小於閾值的為0。
+'''
+X = [[ 1., -1.,  2.],
+     [ 2.,  0.,  0.],
+     [ 0.,  1., -1.]]
+binarizer = preprocessing.Binarizer().fit(X)
+print('binarizer 列印函式 \n',binarizer)
+print('binarizer.transform(X) 轉換為list \n',binarizer.transform(X))
+
+binarizer22 = preprocessing.Binarizer(copy=True, threshold=1.0).fit(X)
+print('binarizer22 列印函式 \n',binarizer22)
+print('binarizer22.transform(X) 轉換為list \n',binarizer22.transform(X))
+
+from sklearn import preprocessing
+from sklearn import tree
+
+'''
+對於標稱型資料來說，preprocessing.LabelBinarizer是一個很好用的工具。
+比如可以把yes和no轉化為0和1，或是把incident和normal轉化為0和1。當然，對於兩類以上的標籤也是適用的。
+help(preprocessing.LabelBinarizer) # 檢視詳細用法
+'''
+featureList=[[1,0],[1,1],[0,0],[0,1]]  # 特徵矩陣
+labelList=['yes', 'no', 'no', 'yes']  # 標籤矩陣
+lb = preprocessing.LabelBinarizer()  # 將標籤矩陣二值化
+dummY=lb.fit_transform(labelList)
+print('將標籤矩陣二值化 \n',dummY)
+
+# 模型建立和訓練
+clf = tree.DecisionTreeClassifier()
+clf = clf.fit(featureList, dummY)
+#print(clf)
+p=clf.predict([[0,1]])
+print(p)  # [1]
+
+# 逆過程 再把 0 和 1 轉回原始 數值
+yesORno=lb.inverse_transform(p)
+print(yesORno)
+
+'''
+缺失值處理Imputation of missing values
+由於許多現實中的資料集都包含有缺失值，要麼是空白的，要麼使用NaNs或者其它的符號替代。
+這些資料無法直接使用 scikit-learn 分類器直接訓練，所以需要進行處理。
+幸運地是，sklearn 中的 Imputer 類提供了一些基本的方法來處理缺失值，
+如使用均值、中位值或者缺失值所在列中頻繁出現的值來替換。
+Imputer類同樣支援稀疏矩陣。
+
+'''
+from sklearn.preprocessing import Imputer
+imp = Imputer(missing_values='NaN', strategy='mean', axis=0)
+imp.fit([[1, 2], [np.nan, 3], [7, 6]]) # 擬合得出 列均值，填充給 X 的 缺失值
+
+# Imputer(axis=0, copy=True, missing_values='NaN', strategy='mean', verbose=0)
+X = [[np.nan, 2], [6, np.nan], [7, 6]]
+print('缺失值處理Imputation of missing values \n',imp.transform(X))
+
+'''
+正則化Normalization 的過程是將每個樣本縮放到單位範數(每個樣本的範數為1)，
+如果要使用如二次型(點積)或者其它核方法計算兩個樣本之間的相似性這個方法會很有用。
+該方法是文字分類和聚類分析中經常使用的向量空間模型（Vector Space Model)的基礎.
+Normalization 主要思想是對每個樣本計算其p-範數，然後對該樣本中每個元素除以該範數，
+這樣處理的結果是使得每個處理後樣本的p-範數(l1-norm,l2-norm)等於1。
+
+def normalize(X, norm='l2', axis=1, copy=True)
+注意，這個操作是對所有樣本（而不是features）進行的，也就是將每個樣本的值除以這個樣本的Li範數。
+所以這個操作是針對axis=1進行的。
+
+三、正則化
+對每個樣本計算其 p-範數，再對每個元素除以該範數，這使得每個處理後樣本的p-範數（l1-norm,l2-norm）等於1。
+如果後續要使用二次型等方法計算兩個樣本之間的相似性會有用。
+preprocessing.Normalizer(norm=’l2’, copy=True)
+
+'''
+X = np.array([[1., -1., 2.], [2., 0., 0.], [0., 1., -1.]])
+X_normalized = preprocessing.normalize(X, norm='l2')
+print( '正則化Normalization\n',X_normalized )
+normalizer = preprocessing.Normalizer().fit(X)
+print( 'normalizer.transform(X) 正則化 \n' , normalizer.transform(X) )
+print( '所有元素求和 \n' , normalizer.transform(X).sum() )
+print( 'X所有元素的範數和 \n' , abs(X).sum() )
+# print( abs(X).sum(axis=0) )
+# print( abs(X).sum(axis=1) )
+print( 'X所有元素都除以 所有元素的範數和 \n' , X / X.sum() )
+
+'''
+幾個概念
+1-範數：向量各分量絕對值之和
+2-範數：向量長度
+最大範數：向量各分量絕對值的最大值
+p-範數的計算公式：||X||p=(|x1|^p+|x2|^p+…+|xn|^p)^1/p
+'''
+
+'''
+標準化（Scale）和正則化（Normalization）是兩種常用的資料預處理方法，
+其作用是讓資料變得更加“規範”一些。在文字聚類等任務中使用的比較多。
+1.資料標準化
+公式為：(X-mean)/std  計算時對每個屬性/每列分別進行。將資料按期屬性（按列進行）減去其均值，並處以其方差。
+得到的結果是，對於每個屬性/每列來說所有資料都聚集在0附近，方差為1。經過資料標準化的資料，可以看到有些特徵被凸顯出來了。
+
+2.資料正則化
+正則化的過程是將每個樣本縮放到單位範數（每個樣本的範數為1），
+如果後面要使用如二次型（點積）或者其它核方法計算兩個樣本之間的相似性這個方法會很有用。
+
+Normalization主要思想是對每個樣本計算其p-範數，然後對該樣本中每個元素除以該範數，
+這樣處理的結果是使得每個處理後樣本的p-範數（l1-norm,l2-norm）等於1。
+p-範數的計算公式：||X||p=(|x1|^p+|x2|^p+...+|xn|^p)^1/p
+該方法主要應用於文字分類和聚類中。例如，對於兩個TF-IDF向量的l2-norm進行點積，就可以得到這兩個向量的餘弦相似性。
+
+在sklearn中有三種正則化方法，l1範數、l2範數、max範數。
+使用這三種範數生成的結果如下圖所示：
+在肉眼上很難看出有什麼區別，
+不過還是能看出l2範數的結果相對更好，即能儘可能的削弱“強勢”特徵，將一些數值較小但是比較有特點的特徵“凸顯”出來。
+
+sklearn官方文件：
+http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.scale.html#sklearn.preprocessing.scale
+http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.normalize.html#sklearn.preprocessing.normalize
+'''
+
+'''
+更多的資料預處理方法參考官方文件：
+http://scikit-learn.org/stable/modules/preprocessing.html#standardization-or-mean-removal-and-variance-scaling
+
+參考官方文件：http://scikit-learn.org/stable/modules/preprocessing.html
+官網：http://scikit-learn.org/stable/
+'''
